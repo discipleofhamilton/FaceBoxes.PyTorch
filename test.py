@@ -19,7 +19,7 @@ parser.add_argument('-m', '--trained_model', default='weights/FaceBoxes.pth',
                     type=str, help='Trained state_dict file path to open')
 parser.add_argument('--save_folder', default='eval/', type=str, help='Dir to save results')
 parser.add_argument('--cpu', action="store_true", default=False, help='Use cpu inference')
-parser.add_argument('--dataset', default='PASCAL', type=str, choices=['AFW', 'PASCAL', 'FDDB'], help='dataset')
+parser.add_argument('--dataset', default='PASCAL', type=str, choices=['AFW', 'PASCAL', 'FDDB', 'track_source'], help='dataset')
 parser.add_argument('--confidence_threshold', default=0.05, type=float, help='confidence_threshold')
 parser.add_argument('--top_k', default=5000, type=int, help='top_k')
 parser.add_argument('--nms_threshold', default=0.3, type=float, help='nms_threshold')
@@ -95,16 +95,29 @@ if __name__ == '__main__':
         resize = 2.5
     elif args.dataset == "AFW":
         resize = 1
+    elif args.dataset == "track_source":
+        resize = 0.5
 
     _t = {'forward_pass': Timer(), 'misc': Timer()}
+
+    first_img = True
 
     # testing begin
     for i, img_name in enumerate(test_dataset):
         image_path = testset_folder + img_name + '.jpg'
         img = np.float32(cv2.imread(image_path, cv2.IMREAD_COLOR))
+
+        if first_img:
+            print(img.shape)
+
         if resize != 1:
             img = cv2.resize(img, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR)
         im_height, im_width, _ = img.shape
+
+        if first_img:
+            print(img.shape)
+            first_img = False
+
         scale = torch.Tensor([img.shape[1], img.shape[0], img.shape[1], img.shape[0]])
         img -= (104, 117, 123)
         img = img.transpose(2, 0, 1)
