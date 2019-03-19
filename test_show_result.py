@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser(description='FaceBoxes')
 
 parser.add_argument('-m', '--trained_model', default='weights/FaceBoxes.pth',
                     type=str, help='Trained state_dict file path to open')
+parser.add_argument('--save_result', default=False, type=bool, help='Determine to save the result of not')
 parser.add_argument('--save_folder', default='eval/', type=str, help='Dir to save results')
 parser.add_argument('--cpu', action="store_true", default=False, help='Use cpu inference')
 parser.add_argument('--dataset', default='PASCAL', type=str, choices=['AFW', 'PASCAL', 'FDDB', 'track_source'], help='dataset')
@@ -76,11 +77,11 @@ if __name__ == '__main__':
     device = torch.device("cpu" if args.cpu else "cuda")
     net = net.to(device)
 
-
-    # save file
-    if not os.path.exists(args.save_folder):
-        os.makedirs(args.save_folder)
-    # fw = open(os.path.join(args.save_folder, args.dataset + '_dets.txt'), 'w')
+    # save result or not
+    if args.save_result:
+        # save file
+        if not os.path.exists(args.save_folder):
+            os.makedirs(args.save_folder)
 
     # testing dataset
     testset_folder = os.path.join('data', args.dataset, 'images/')
@@ -114,7 +115,7 @@ if __name__ == '__main__':
 
         if resize != 1:
             img = cv2.resize(img, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR)
-            # origin_img = cv2.resize(origin_img, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR)
+            
         im_height, im_width, _ = img.shape
 
         if first_img:
@@ -172,8 +173,7 @@ if __name__ == '__main__':
 
         # save dets
         if args.dataset == "FDDB":
-            # fw.write('{:s}\n'.format(img_name))
-            # fw.write('{:.1f}\n'.format(dets.shape[0]))
+
             for k in range(dets.shape[0]):
                 xmin = dets[k, 0]
                 ymin = dets[k, 1]
@@ -182,7 +182,9 @@ if __name__ == '__main__':
                 score = dets[k, 4]
                 w = xmax - xmin + 1
                 h = ymax - ymin + 1
-                # fw.write('{:.3f} {:.3f} {:.3f} {:.3f} {:.10f}\n'.format(xmin, ymin, w, h, score))
+
+                if score > 0.9:
+                    cv2.rectangle(origin_img, (int(xmin), int(ymin)), (int(xmax), int(ymax)), (255, 0, 0), 2)
         else:
             for k in range(dets.shape[0]):
                 xmin = dets[k, 0]
@@ -191,14 +193,16 @@ if __name__ == '__main__':
                 ymax = dets[k, 3]
                 ymin += 0.2 * (ymax - ymin + 1)
                 score = dets[k, 4]
-                # cv2.rectangle( image, point top-left, point bottom-right, color(0,0,255), shift=0 )
-                
-                # fw.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(img_name, score, xmin, ymin, xmax, ymax))
+
+                if score > 0.65:
+                    cv2.rectangle(origin_img, (int(xmin), int(ymin)), (int(xmax), int(ymax)), (255, 0, 0), 2)
+
         print('im_detect: {:d}/{:d} forward_pass_time: {:.4f}s misc: {:.4f}s '.format(i + 1, num_images, _t['forward_pass'].average_time, _t['misc'].average_time))
-        cv2.rectangle(origin_img, (int(xmin), int(ymin)), (int(xmax), int(ymax)), (255, 0, 0), 2)
-        # img = cv2.fromarray(img)
         cv2.imshow("Faceboxes-Pytorch", origin_img)
-        cv2.imwrite(args.save_folder + str(i+1)+".jpg", origin_img)
+
+        # save result or not
+        if args.save_result:
+            cv2.imwrite(args.save_folder + "/" + str(i+1) + ".jpg", origin_img)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             cv2.destroyAllWindows()
