@@ -23,6 +23,7 @@ parser.add_argument('--save_folder', default='eval/', type=str, help='Dir to sav
 parser.add_argument('--cpu', action="store_true", default=False, help='Use cpu inference')
 parser.add_argument('--dataset', default='PASCAL', type=str, choices=['AFW', 'PASCAL', 'FDDB', 'track_source'], help='dataset')
 parser.add_argument('--confidence_threshold', default=0.05, type=float, help='confidence_threshold')
+parser.add_argument('--facebox_threshold', default=0.9, type=float, help='facebox_threshold')
 parser.add_argument('--top_k', default=5000, type=int, help='top_k')
 parser.add_argument('--nms_threshold', default=0.3, type=float, help='nms_threshold')
 parser.add_argument('--keep_top_k', default=750, type=int, help='keep_top_k')
@@ -135,7 +136,7 @@ if __name__ == '__main__':
         # end = time.time()
         _t['forward_pass'].toc()
         _t['misc'].tic()
-        img = img.numpy()
+
         priorbox = PriorBox(cfg, out[2], (im_height, im_width), phase='test')
         priors = priorbox.forward()
         priors = priors.to(device)
@@ -183,7 +184,7 @@ if __name__ == '__main__':
                 w = xmax - xmin + 1
                 h = ymax - ymin + 1
 
-                if score > 0.9:
+                if score >= args.facebox_threshold:
                     cv2.rectangle(origin_img, (int(xmin), int(ymin)), (int(xmax), int(ymax)), (255, 0, 0), 2)
         else:
             for k in range(dets.shape[0]):
@@ -194,7 +195,7 @@ if __name__ == '__main__':
                 ymin += 0.2 * (ymax - ymin + 1)
                 score = dets[k, 4]
 
-                if score > 0.65:
+                if score >= args.facebox_threshold:
                     cv2.rectangle(origin_img, (int(xmin), int(ymin)), (int(xmax), int(ymax)), (255, 0, 0), 2)
 
         print('im_detect: {:d}/{:d} forward_pass_time: {:.4f}s misc: {:.4f}s '.format(i + 1, num_images, _t['forward_pass'].average_time, _t['misc'].average_time))
